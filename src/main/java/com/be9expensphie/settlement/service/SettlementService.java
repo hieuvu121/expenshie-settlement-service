@@ -3,6 +3,8 @@ package com.be9expensphie.settlement.service;
 import com.be9expensphie.settlement.dto.SettlementDTO.SettlementResponseDTO;
 import com.be9expensphie.settlement.entity.SettlementEntity;
 import com.be9expensphie.settlement.enums.SettlementStatus;
+import com.be9expensphie.settlement.exception.NotFoundException;
+import com.be9expensphie.settlement.producer.WebSocketEventProducer;
 import com.be9expensphie.settlement.repository.SettlementRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,15 +21,14 @@ import java.util.List;
 public class SettlementService {
 
     private final SettlementRepository settlementRepo;
+    private final WebSocketEventProducer webSocketEventProducer;
 
-    // Called by Kafka consumer (Phase 5 Kafka step) — also exposed via REST for manual testing
     @Transactional
     public void createSettlementsForExpense(Long expenseId, Long householdId,
                                             Long createdByMemberId, List<SplitInfo> splits) {
         for (SplitInfo split : splits) {
             if (split.memberId().equals(createdByMemberId)) continue;
 
-            // idempotency — skip if already exists for this expense + payer combo
             if (settlementRepo.existsByExpenseIdAndFromMemberId(expenseId, split.memberId())) {
                 log.info("Settlement already exists for expenseId={}, fromMemberId={} — skipping", expenseId, split.memberId());
                 continue;
@@ -66,12 +67,14 @@ public class SettlementService {
         }
         settlement.setStatus(SettlementStatus.PAID);
         settlement.setPaidAt(LocalDateTime.now());
-        return toDTO(settlementRepo.save(settlement));
+        SettlementEntity saved = settlementRepo.save(settlement);
+        webSocketEventProducer.publishSettlementPaid(saved);
+        return toDTO(saved);
     }
 
     private SettlementEntity findOrThrow(Long id) {
         return settlementRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Settlement not found"));
+                .orElseThrow(() -> new NotFoundException("Settlement not found: " + id));
     }
 
     private SettlementResponseDTO toDTO(SettlementEntity s) {
