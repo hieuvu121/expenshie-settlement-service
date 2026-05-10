@@ -19,7 +19,7 @@ public class WebSocketEventProducer {
                 + ",\"householdId\":" + settlement.getHouseholdId()
                 + ",\"fromMemberId\":" + settlement.getFromMemberId()
                 + ",\"toMemberId\":" + settlement.getToMemberId()
-                + ",\"status\":\"PAID\"}";
+                + ",\"status\":\"COMPLETED\"}";
 
         WebSocketEvent event = WebSocketEvent.builder()
                 .destination("/topic/households/" + settlement.getHouseholdId() + "/settlement")
