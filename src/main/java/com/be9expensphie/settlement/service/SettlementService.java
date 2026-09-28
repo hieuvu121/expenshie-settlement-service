@@ -89,6 +89,7 @@ public class SettlementService {
     @Transactional
     public SettlementResponseDTO toggleStatus(Long settlementId, Long memberId) {
         SettlementEntity s = findOrThrow(settlementId);
+        rejectIfVoided(s);
         if (!s.getFromMemberId().equals(memberId)) {
             throw new RuntimeException("Only the paying member can toggle settlement status");
         }
@@ -105,6 +106,7 @@ public class SettlementService {
     @Transactional
     public SettlementResponseDTO approveSettlement(Long settlementId, Long memberId) {
         SettlementEntity s = findOrThrow(settlementId);
+        rejectIfVoided(s);
         if (!s.getToMemberId().equals(memberId)) {
             throw new RuntimeException("Only the receiving member can approve the settlement");
         }
@@ -121,6 +123,7 @@ public class SettlementService {
     @Transactional
     public SettlementResponseDTO rejectSettlement(Long settlementId, Long memberId) {
         SettlementEntity s = findOrThrow(settlementId);
+        rejectIfVoided(s);
         if (!s.getToMemberId().equals(memberId)) {
             throw new RuntimeException("Only the receiving member can reject the settlement");
         }
@@ -136,6 +139,16 @@ public class SettlementService {
                 ? settlementRepo.findByHouseholdId(householdId)
                 : settlementRepo.findByHouseholdIdAndStatus(householdId, status);
         return settlements.stream().map(this::toDTO).toList();
+    }
+
+    /*
+     * A voided settlement is not a debt any more. Without this a member could
+     * pay, or a creditor approve, a debt an expense reversal already removed.
+     */
+    private static void rejectIfVoided(SettlementEntity s) {
+        if (s.getStatus() == SettlementStatus.VOIDED) {
+            throw new RuntimeException("This settlement was voided by an expense reversal");
+        }
     }
 
     private SettlementEntity findOrThrow(Long id) {

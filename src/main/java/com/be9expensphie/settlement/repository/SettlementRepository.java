@@ -17,6 +17,9 @@ public interface SettlementRepository extends JpaRepository<SettlementEntity, Lo
 
     boolean existsByExpenseIdAndFromMemberId(Long expenseId, Long fromMemberId);
 
+    /* All settlements derived from one expense, whatever their status. */
+    List<SettlementEntity> findByExpenseId(Long expenseId);
+
     // Member-filtered, newest-first (for paginated "All Settlements")
     List<SettlementEntity> findByFromMemberIdAndHouseholdIdOrderByIdDesc(Long fromMemberId, Long householdId);
 

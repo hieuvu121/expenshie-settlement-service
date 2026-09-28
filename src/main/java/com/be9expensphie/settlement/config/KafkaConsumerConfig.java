@@ -1,5 +1,6 @@
 package com.be9expensphie.settlement.config;
 import com.be9expensphie.common.event.ExpenseEvent;
+import com.be9expensphie.common.event.ExpenseReversalRequested;
 import com.be9expensphie.common.event.HouseholdMemberEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -64,6 +65,27 @@ public class KafkaConsumerConfig {
             householdMemberEventKafkaListenerContainerFactory() {
         var factory = new ConcurrentKafkaListenerContainerFactory<String, HouseholdMemberEvent>();
         factory.setConsumerFactory(householdMemberEventConsumerFactory());
+        return factory;
+    }
+    /* The reversal saga's inbound request. Its own group, independent of both
+     * expense-events and the membership projection. */
+    @Bean
+    public ConsumerFactory<String, ExpenseReversalRequested> expenseReversalRequestedConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "settlement-reversal-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.be9expensphie.common.event");
+        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, ExpenseReversalRequested.class.getName());
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, ExpenseReversalRequested>
+            expenseReversalRequestedKafkaListenerContainerFactory() {
+        var factory = new ConcurrentKafkaListenerContainerFactory<String, ExpenseReversalRequested>();
+        factory.setConsumerFactory(expenseReversalRequestedConsumerFactory());
         return factory;
     }
 }

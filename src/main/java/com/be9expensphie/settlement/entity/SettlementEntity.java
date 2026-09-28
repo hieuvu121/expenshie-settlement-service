@@ -43,4 +43,15 @@ public class SettlementEntity {
     private LocalDateTime createdAt;
 
     private LocalDateTime paidAt;
+
+    /**
+     * Which reversal voided this row. Null unless status == VOIDED.
+     *
+     * Not compensation bookkeeping -- nothing un-voids. It exists so a
+     * re-requested reversal can be answered idempotently: seeing its own sagaId
+     * here, ReversalDecisionService re-emits ACCEPTED instead of voiding twice
+     * or refusing its own work.
+     */
+    @Column(name = "voiding_saga_id", length = 36)
+    private String voidingSagaId;
 }

@@ -1,5 +1,6 @@
 package com.be9expensphie.settlement.config;
 
+import com.be9expensphie.common.event.ExpenseReversalDecided;
 import com.be9expensphie.common.event.WebSocketEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -29,6 +30,12 @@ public class KafkaProducerConfig {
 
     @Bean
     public KafkaTemplate<String, WebSocketEvent> webSocketKafkaTemplate() {
+        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(baseProps()));
+    }
+
+    /* The reversal saga's reply, drained from the outbox by OutboxPublisher. */
+    @Bean
+    public KafkaTemplate<String, ExpenseReversalDecided> expenseReversalDecidedKafkaTemplate() {
         return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(baseProps()));
     }
 
