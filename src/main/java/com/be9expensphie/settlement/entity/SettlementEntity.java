@@ -35,8 +35,21 @@ public class SettlementEntity {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
+    /*
+     * varchar, not a native MySQL ENUM.
+     *
+     * Hibernate generates enum('...') for @Enumerated(EnumType.STRING) by
+     * default, and ddl-auto=update never alters an existing column -- so adding
+     * a value to the Java enum leaves the database rejecting it with "Data
+     * truncated for column". This column was still enum('APPROVED','PENDING',
+     * 'REJECTED') when REVERSING and REVERSED were added, and settlements.status
+     * had been stuck on enum('PAID','PENDING') since long before that, silently
+     * making COMPLETED and AWAITING_APPROVAL unwritable.
+     *
+     * An explicit varchar means the next enum value needs no DDL at all.
+     */
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(32)")
     private SettlementStatus status;
 
     @Column(nullable = false)
