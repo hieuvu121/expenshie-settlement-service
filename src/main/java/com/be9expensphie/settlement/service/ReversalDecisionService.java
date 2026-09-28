@@ -19,9 +19,16 @@ import java.util.function.Predicate;
  * This is the saga's pivot: before it nothing has changed and compensation is
  * free; after it the debts are gone and only forward recovery is possible.
  *
- * MUST stay a single transaction. The check for a COMPLETED settlement and the
- * voiding have to be atomic, or a creditor approving a payment between the two
- * slips through and a settled debt gets voided.
+ * MUST stay a single transaction, so the voiding is all-or-nothing: a
+ * partially reversed expense is worse than an un-reversed one.
+ *
+ * The transaction alone does NOT make the check-then-void atomic, which an
+ * earlier version of this comment wrongly claimed. Under InnoDB REPEATABLE READ
+ * the SELECT below is a consistent non-locking read while the UPDATE is a
+ * current read, so an approval committing in between would be silently
+ * overwritten. SettlementEntity.version is what closes that; a conflict rolls
+ * this decision and its outbox reply back together, and the re-request sweep
+ * retries into the correct REFUSED.
  */
 @Service
 @RequiredArgsConstructor
